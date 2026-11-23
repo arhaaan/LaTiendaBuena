@@ -8,17 +8,29 @@
 import SwiftUI
 
 struct ContentView: View {
+    @Environment(AuthManager.self) private var authManager
+    @Environment(UserManager.self) private var userManager
+    
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
+        Group {
+            switch authManager.authState {
+            case .authenticated:
+                UserProfileView()
+            case .unauthenticated:
+                LoginView()
+            case .unknown:
+                ProgressView()
+            }
         }
-        .padding()
+        .task { await authManager.refreshUser() }
+        .task(id: authManager.authState) {
+            guard authManager.authState == .authenticated else { return }
+            await userManager.fetchCurrentUser()
+        }
     }
 }
 
 #Preview {
     ContentView()
+        .environment(AuthManager())
 }
